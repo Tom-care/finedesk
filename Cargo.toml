@@ -1,11 +1,11 @@
 [package]
-name = "finedesk"
+name = "rustdesk"
 version = "1.0.0"
 authors = ["Tom-care"]
 edition = "2021"
 build= "build.rs"
 description = "FineDesk Remote Desktop"
-default-run = "finedesk"
+default-run = "rustdesk"
 rust-version = "1.75"
 
 [lib]
