@@ -59,7 +59,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final isIncomingOnly = bind.isIncomingOnly();
+    final isIncomingOnly = true; // FineDesk: always hide outgoing connection pane
     return _buildBlock(
         child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
