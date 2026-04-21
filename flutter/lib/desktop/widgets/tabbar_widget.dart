@@ -431,6 +431,11 @@ class _DesktopTabState extends State<DesktopTab>
 
   @override
   void onWindowClose() async {
+    // FineDesk: minimize to taskbar instead of closing, so the app stays running
+    if (isMainWindow && isWindows) {
+      await windowManager.minimize();
+      return;
+    }
     mainWindowClose() async => await windowManager.hide();
     notMainWindowClose(WindowController windowController) async {
       if (controller.length != 0) {
@@ -801,10 +806,11 @@ class WindowActionPanelState extends State<WindowActionPanel> {
                   onTap: () async {
                     final res = await widget.onClose?.call() ?? true;
                     if (res) {
-                      // hide for all window
-                      // note: the main window can be restored by tray icon
+                      // FineDesk: minimize main window to taskbar instead of closing
                       Future.delayed(Duration.zero, () async {
-                        if (widget.isMainWindow) {
+                        if (widget.isMainWindow && isWindows) {
+                          await windowManager.minimize();
+                        } else if (widget.isMainWindow) {
                           await windowManager.close();
                         } else {
                           await WindowController.fromWindowId(kWindowId!)
