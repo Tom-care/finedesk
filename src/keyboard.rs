@@ -763,6 +763,25 @@ pub fn event_to_key_events(
 
     key_event.mode = keyboard_mode.into();
 
+    // FineDesk: Handle Hangul/Hanja keys in all keyboard modes
+    // These keys are often lost in map mode due to scancode filtering
+    match event.event_type {
+        EventType::KeyPress(Key::Hangul) | EventType::KeyRelease(Key::Hangul) => {
+            key_event.set_control_key(ControlKey::Hangul);
+            key_event.down = matches!(event.event_type, EventType::KeyPress(..));
+            key_event.mode = KeyboardMode::Legacy.into();
+            return vec![key_event];
+        }
+        EventType::KeyPress(Key::Hanja) | EventType::KeyRelease(Key::Hanja) |
+        EventType::KeyPress(Key::Hanji) | EventType::KeyRelease(Key::Hanji) => {
+            key_event.set_control_key(ControlKey::Hanja);
+            key_event.down = matches!(event.event_type, EventType::KeyPress(..));
+            key_event.mode = KeyboardMode::Legacy.into();
+            return vec![key_event];
+        }
+        _ => {}
+    }
+
     let mut key_events = match keyboard_mode {
         KeyboardMode::Map => map_keyboard_mode(peer.as_str(), event, key_event),
         KeyboardMode::Translate => translate_keyboard_mode(peer.as_str(), event, key_event),
