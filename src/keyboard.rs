@@ -764,16 +764,21 @@ pub fn event_to_key_events(
     key_event.mode = keyboard_mode.into();
 
     // FineDesk: Handle Hangul/Hanja keys in all keyboard modes
-    // These keys are often lost in map mode due to scancode filtering
+    // On Windows, the 한/영 key arrives as Key::Kana (VK 0x15), not Key::Hangul
+    // On Windows, the 한자 key arrives as Key::Hanja (VK 0x19)
     match event.event_type {
-        EventType::KeyPress(Key::Hangul) | EventType::KeyRelease(Key::Hangul) => {
+        EventType::KeyPress(Key::Hangul) | EventType::KeyRelease(Key::Hangul) |
+        EventType::KeyPress(Key::Kana) | EventType::KeyRelease(Key::Kana) |
+        EventType::KeyPress(Key::KanaMode) | EventType::KeyRelease(Key::KanaMode) |
+        EventType::KeyPress(Key::Lang1) | EventType::KeyRelease(Key::Lang1) => {
             key_event.set_control_key(ControlKey::Hangul);
             key_event.down = matches!(event.event_type, EventType::KeyPress(..));
             key_event.mode = KeyboardMode::Legacy.into();
             return vec![key_event];
         }
         EventType::KeyPress(Key::Hanja) | EventType::KeyRelease(Key::Hanja) |
-        EventType::KeyPress(Key::Hanji) | EventType::KeyRelease(Key::Hanji) => {
+        EventType::KeyPress(Key::Hanji) | EventType::KeyRelease(Key::Hanji) |
+        EventType::KeyPress(Key::Lang2) | EventType::KeyRelease(Key::Lang2) => {
             key_event.set_control_key(ControlKey::Hanja);
             key_event.down = matches!(event.event_type, EventType::KeyPress(..));
             key_event.mode = KeyboardMode::Legacy.into();
