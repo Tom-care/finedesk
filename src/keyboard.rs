@@ -764,8 +764,28 @@ pub fn event_to_key_events(
     key_event.mode = keyboard_mode.into();
 
     // FineDesk: Handle Hangul/Hanja keys in all keyboard modes
-    // On Windows, the 한/영 key arrives as Key::Kana (VK 0x15), not Key::Hangul
-    // On Windows, the 한자 key arrives as Key::Hanja (VK 0x19)
+    // On Windows, 한/영 key = VK_HANGUL (0x15), 한자 key = VK_HANJA (0x19)
+    // Use platform_code (vkCode) for reliable detection since rdev Key enum
+    // mapping varies. Also match by Key enum as fallback for non-Windows.
+    #[cfg(target_os = "windows")]
+    {
+        let vk = event.platform_code as u32;
+        let is_press = matches!(event.event_type, EventType::KeyPress(..));
+        if vk == 0x15 {
+            // VK_HANGUL / VK_KANA
+            key_event.set_control_key(ControlKey::Hangul);
+            key_event.down = is_press;
+            key_event.mode = KeyboardMode::Legacy.into();
+            return vec![key_event];
+        } else if vk == 0x19 {
+            // VK_HANJA / VK_KANJI
+            key_event.set_control_key(ControlKey::Hanja);
+            key_event.down = is_press;
+            key_event.mode = KeyboardMode::Legacy.into();
+            return vec![key_event];
+        }
+    }
+    #[cfg(not(target_os = "windows"))]
     match event.event_type {
         EventType::KeyPress(Key::Hangul) | EventType::KeyRelease(Key::Hangul) |
         EventType::KeyPress(Key::Kana) | EventType::KeyRelease(Key::Kana) |
