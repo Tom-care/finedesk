@@ -40,6 +40,7 @@ fn mouse_event(flags: u32, data: u32, dx: i32, dy: i32) -> DWORD {
 }
 
 fn keybd_event(mut flags: u32, vk: u16, scan: u16) -> DWORD {
+    let mut vk = vk;
     let mut scan = scan;
     unsafe {
         // https://github.com/rustdesk/rustdesk/issues/366
@@ -48,6 +49,11 @@ fn keybd_event(mut flags: u32, vk: u16, scan: u16) -> DWORD {
                 let current_window_thread_id =
                     GetWindowThreadProcessId(GetForegroundWindow(), std::ptr::null_mut());
                 LAYOUT = GetKeyboardLayout(current_window_thread_id);
+            }
+            // FineDesk: Convert Right Alt to Hangul key on Korean keyboard layout
+            // https://github.com/rustdesk/rustdesk/pull/1032
+            if (LAYOUT as u16 == 0x0412) && (vk == winapi::um::winuser::VK_RMENU as u16) {
+                vk = winapi::um::winuser::VK_HANGUL as u16;
             }
             scan = MapVirtualKeyExW(vk as _, 0, LAYOUT) as _;
         }
