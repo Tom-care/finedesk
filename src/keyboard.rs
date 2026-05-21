@@ -764,15 +764,15 @@ pub fn event_to_key_events(
     key_event.mode = keyboard_mode.into();
 
     // FineDesk: Handle Hangul/Hanja keys in all keyboard modes
-    // On Windows, 한/영 key = VK_HANGUL (0x15), 한자 key = VK_HANJA (0x19)
-    // Use platform_code (vkCode) for reliable detection since rdev Key enum
-    // mapping varies. Also match by Key enum as fallback for non-Windows.
+    // On modern Korean keyboards, 한/영 is Right Alt (VK_RMENU = 0xA5),
+    // not VK_HANGUL (0x15). We check for both, plus check keyboard layout
+    // for Right Alt to distinguish Korean 한/영 from European AltGr.
     #[cfg(target_os = "windows")]
     {
         let vk = event.platform_code as u32;
         let is_press = matches!(event.event_type, EventType::KeyPress(..));
         if vk == 0x15 {
-            // VK_HANGUL / VK_KANA
+            // VK_HANGUL / VK_KANA - dedicated Hangul key
             key_event.set_control_key(ControlKey::Hangul);
             key_event.down = is_press;
             key_event.mode = KeyboardMode::Legacy.into();
@@ -783,6 +783,21 @@ pub fn event_to_key_events(
             key_event.down = is_press;
             key_event.mode = KeyboardMode::Legacy.into();
             return vec![key_event];
+        } else if vk == 0xA5 {
+            // VK_RMENU (Right Alt) - on Korean layout this is the 한/영 key
+            let is_korean = unsafe {
+                let hwnd = winapi::um::winuser::GetForegroundWindow();
+                let tid = winapi::um::winuser::GetWindowThreadProcessId(hwnd, std::ptr::null_mut());
+                let layout = winapi::um::winuser::GetKeyboardLayout(tid);
+                // Korean language ID = 0x0412
+                (layout as u16) == 0x0412
+            };
+            if is_korean {
+                key_event.set_control_key(ControlKey::Hangul);
+                key_event.down = is_press;
+                key_event.mode = KeyboardMode::Legacy.into();
+                return vec![key_event];
+            }
         }
     }
     #[cfg(not(target_os = "windows"))]
