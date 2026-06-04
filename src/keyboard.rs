@@ -765,17 +765,19 @@ pub fn event_to_key_events(
 
     // FineDesk: Handle Hangul/Hanja keys in all keyboard modes
     // On modern Korean keyboards, 한/영 is Right Alt (VK_RMENU = 0xA5),
-    // not VK_HANGUL (0x15). We check for both, plus check keyboard layout
-    // for Right Alt to distinguish Korean 한/영 from European AltGr.
+    // not VK_HANGUL (0x15). Always treat Right Alt as Hangul toggle
+    // (FineDesk is deployed for Korean users only).
     #[cfg(target_os = "windows")]
     {
         let vk = event.platform_code as u32;
         let is_press = matches!(event.event_type, EventType::KeyPress(..));
-        if vk == 0x15 {
-            // VK_HANGUL / VK_KANA - dedicated Hangul key
+        log::debug!("FineDesk key event: vk=0x{:X}, scancode=0x{:X}, press={}", vk, event.position_code, is_press);
+        if vk == 0x15 || vk == 0xA5 {
+            // VK_HANGUL (0x15) or VK_RMENU (0xA5, Right Alt = 한/영 on Korean keyboards)
             key_event.set_control_key(ControlKey::Hangul);
             key_event.down = is_press;
             key_event.mode = KeyboardMode::Legacy.into();
+            log::info!("FineDesk: Sending Hangul key (vk=0x{:X})", vk);
             return vec![key_event];
         } else if vk == 0x19 {
             // VK_HANJA / VK_KANJI
@@ -783,21 +785,6 @@ pub fn event_to_key_events(
             key_event.down = is_press;
             key_event.mode = KeyboardMode::Legacy.into();
             return vec![key_event];
-        } else if vk == 0xA5 {
-            // VK_RMENU (Right Alt) - on Korean layout this is the 한/영 key
-            let is_korean = unsafe {
-                let hwnd = winapi::um::winuser::GetForegroundWindow();
-                let tid = winapi::um::winuser::GetWindowThreadProcessId(hwnd, std::ptr::null_mut());
-                let layout = winapi::um::winuser::GetKeyboardLayout(tid);
-                // Korean language ID = 0x0412
-                (layout as u16) == 0x0412
-            };
-            if is_korean {
-                key_event.set_control_key(ControlKey::Hangul);
-                key_event.down = is_press;
-                key_event.mode = KeyboardMode::Legacy.into();
-                return vec![key_event];
-            }
         }
     }
     #[cfg(not(target_os = "windows"))]
